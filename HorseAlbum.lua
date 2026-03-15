@@ -15,6 +15,7 @@ local DETAIL_PANEL_WIDTH = 440
 local SCROLLBAR_WIDTH = 20
 local SCROLLBAR_OFFSET = 6
 local SCROLLBAR_TO_PANEL_GAP = 12
+local INFO_PANEL_HEIGHT = 250
 local MODEL_DEFAULT_FACING = 0.45
 local MODEL_ROTATE_SENSITIVITY = 0.02
 local MODEL_DEFAULT_ZOOM = 1.0
@@ -125,7 +126,7 @@ local function CreateCard(parent, index)
     sourceText:SetJustifyH("CENTER")
 
     local activeTag = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    activeTag:SetPoint("BOTTOM", 0, 10)
+    activeTag:SetPoint("BOTTOM", 0, 6)
     activeTag:SetTextColor(0.45, 0.95, 0.55)
     activeTag:SetText("SUMMONED")
     activeTag:Hide()
@@ -324,8 +325,8 @@ local function EnsureFrame()
     local function ApplyWindowSize()
         local parentWidth = UIParent:GetWidth() or 0
         local parentHeight = UIParent:GetHeight() or 0
-        local desiredWidth = math.max(900, math.floor(parentWidth * 0.8))
-        local desiredHeight = math.max(600, math.floor(parentHeight * 0.8))
+        local desiredWidth = math.max(1000, math.floor(parentWidth * 0.84))
+        local desiredHeight = math.max(660, math.floor(parentHeight * 0.84))
 
         local horizontalChrome =
             (EDGE_PADDING * 2) + SCROLLBAR_OFFSET + SCROLLBAR_WIDTH + SCROLLBAR_TO_PANEL_GAP + DETAIL_PANEL_WIDTH
@@ -376,7 +377,7 @@ local function EnsureFrame()
 
     local detailsPanel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     detailsPanel:SetPoint("TOPRIGHT", -EDGE_PADDING, -HEADER_HEIGHT - EDGE_PADDING)
-    detailsPanel:SetPoint("BOTTOMRIGHT", -EDGE_PADDING, EDGE_PADDING + FOOTER_HEIGHT)
+    detailsPanel:SetPoint("BOTTOMRIGHT", -EDGE_PADDING, EDGE_PADDING + FOOTER_HEIGHT + INFO_PANEL_HEIGHT + CARD_SPACING)
     detailsPanel:SetWidth(DETAIL_PANEL_WIDTH)
     detailsPanel:SetBackdrop({
         bgFile = "Interface/Buttons/WHITE8X8",
@@ -494,6 +495,25 @@ local function EnsureFrame()
         C_MountJournal.SummonByID(mount.mountID)
     end)
 
+    local infoPanel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    infoPanel:SetPoint("TOPLEFT", detailsPanel, "BOTTOMLEFT", 0, -CARD_SPACING)
+    infoPanel:SetPoint("TOPRIGHT", detailsPanel, "BOTTOMRIGHT", 0, -CARD_SPACING)
+    infoPanel:SetHeight(INFO_PANEL_HEIGHT)
+    infoPanel:SetBackdrop({
+        bgFile = "Interface/Buttons/WHITE8X8",
+        edgeFile = "Interface/Buttons/WHITE8X8",
+        edgeSize = 1,
+    })
+    infoPanel:SetBackdropColor(0.06, 0.08, 0.10, 0.96)
+    infoPanel:SetBackdropBorderColor(0.2, 0.25, 0.3, 1)
+
+    local infoText = infoPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    infoText:SetPoint("TOPLEFT", 12, -18)
+    infoText:SetPoint("TOPRIGHT", -12, -18)
+    infoText:SetJustifyH("CENTER")
+    infoText:SetJustifyV("TOP")
+    infoText:SetText("Horse Album by\nVeinlash\n\nBla bla bla")
+
     local content = CreateFrame("Frame", nil, frame)
     content:SetPoint("TOPLEFT", EDGE_PADDING, -HEADER_HEIGHT - EDGE_PADDING)
     content:SetPoint("BOTTOMLEFT", EDGE_PADDING, EDGE_PADDING + FOOTER_HEIGHT)
@@ -519,6 +539,7 @@ local function EnsureFrame()
     frame.content = content
     frame.scroll = scroll
     frame.detailsPanel = detailsPanel
+    frame.infoPanel = infoPanel
 
     detailsPanel.model = detailsModel
     detailsPanel.rotateOverlay = rotateOverlay
