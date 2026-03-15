@@ -10,6 +10,8 @@ local CARD_HEIGHT = 260
 local CARD_SPACING = 18
 local EDGE_PADDING = 24
 local HEADER_HEIGHT = 56
+local FILTER_BAR_HEIGHT = 28
+local FILTER_BAR_GAP = 10
 local FOOTER_HEIGHT = 16
 local DETAIL_PANEL_WIDTH = 440
 local SCROLLBAR_WIDTH = 20
@@ -27,9 +29,76 @@ local RefreshCards
 local UpdateDetailsPanel
 local SetSelectedMount
 local ScrollListByWheel
+local ApplyMountFilter
+local SetActiveFilter
+local UpdateFilterButtons
+
+local FILTER_KEYS = {
+    ALL = "ALL",
+    FLYING = "FLYING",
+    GROUND = "GROUND",
+    AQUATIC = "AQUATIC",
+}
+
+local FILTER_DEFINITIONS = {
+    { key = FILTER_KEYS.ALL,     label = "All" },
+    { key = FILTER_KEYS.FLYING,  label = "Flying" },
+    { key = FILTER_KEYS.GROUND,  label = "Ground" },
+    { key = FILTER_KEYS.AQUATIC, label = "Aquatic" },
+}
+
+local FLYING_MOUNT_TYPE_IDS = {
+    [242] = true,
+    [248] = true,
+    [402] = true,
+    [424] = true,
+}
+
+local GROUND_MOUNT_TYPE_IDS = {
+    [230] = true,
+    [241] = true,
+    [247] = true,
+    [269] = true,
+    [284] = true,
+    [398] = true,
+}
+
+local AQUATIC_MOUNT_TYPE_IDS = {
+    [231] = true,
+    [232] = true,
+    [254] = true,
+    [269] = true,
+    [407] = true,
+    [408] = true,
+    [412] = true,
+}
 
 HorseAlbum.modelFacing = MODEL_DEFAULT_FACING
 HorseAlbum.modelZoom = MODEL_DEFAULT_ZOOM
+HorseAlbum.allMounts = {}
+HorseAlbum.activeFilterKey = FILTER_KEYS.ALL
+HorseAlbum.filterButtons = {}
+
+local function MountMatchesFilter(mount, filterKey)
+    if filterKey == FILTER_KEYS.ALL then
+        return true
+    end
+
+    local mountTypeID = mount and mount.mountTypeID
+    if not mountTypeID then
+        return false
+    end
+
+    if filterKey == FILTER_KEYS.FLYING then
+        return FLYING_MOUNT_TYPE_IDS[mountTypeID] == true
+    elseif filterKey == FILTER_KEYS.GROUND then
+        return GROUND_MOUNT_TYPE_IDS[mountTypeID] == true
+    elseif filterKey == FILTER_KEYS.AQUATIC then
+        return AQUATIC_MOUNT_TYPE_IDS[mountTypeID] == true
+    end
+
+    return true
+end
 
 local function ClampZoom(zoom)
     return math.max(MODEL_MIN_ZOOM, math.min(MODEL_MAX_ZOOM, zoom))
@@ -189,7 +258,8 @@ local function GetCollectedMounts()
         isFactionSpecific, faction, shouldHideOnChar, isCollected = C_MountJournal.GetMountInfoByID(mountID)
 
         if isCollected then
-            local displayID, description, sourceText = C_MountJournal.GetMountInfoExtraByID(mountID)
+            local displayID, description, sourceText, isSelfMount, mountTypeID = C_MountJournal.GetMountInfoExtraByID(
+            mountID)
             mounts[#mounts + 1] = {
                 mountID = mountID,
                 name = name,
@@ -200,6 +270,7 @@ local function GetCollectedMounts()
                 sourceText = sourceText,
                 description = description,
                 displayID = displayID,
+                mountTypeID = mountTypeID,
                 favorite = isFavorite,
             }
         end
@@ -218,6 +289,48 @@ local function GetCollectedMounts()
     end)
 
     return mounts
+end
+
+UpdateFilterButtons = function()
+    for _, button in ipairs(HorseAlbum.filterButtons) do
+        local isSelected = button.filterKey == HorseAlbum.activeFilterKey
+        if isSelected then
+            button:SetBackdropColor(0.16, 0.24, 0.34, 1)
+            button:SetBackdropBorderColor(0.46, 0.74, 1, 1)
+            button.text:SetTextColor(0.95, 0.97, 1)
+        else
+            button:SetBackdropColor(0.08, 0.10, 0.12, 0.95)
+            button:SetBackdropBorderColor(0.26, 0.29, 0.33, 1)
+            button.text:SetTextColor(0.74, 0.79, 0.85)
+        end
+    end
+end
+
+ApplyMountFilter = function(resetScroll)
+    local filteredMounts = {}
+
+    for _, mount in ipairs(HorseAlbum.allMounts or {}) do
+        if MountMatchesFilter(mount, HorseAlbum.activeFilterKey) then
+            filteredMounts[#filteredMounts + 1] = mount
+        end
+    end
+
+    HorseAlbum.mounts = filteredMounts
+
+    if HorseAlbum.frame and HorseAlbum.frame.scroll and resetScroll then
+        HorseAlbum.frame.scroll.offset = 0
+    end
+end
+
+SetActiveFilter = function(filterKey)
+    if not filterKey or HorseAlbum.activeFilterKey == filterKey then
+        return
+    end
+
+    HorseAlbum.activeFilterKey = filterKey
+    ApplyMountFilter(true)
+    UpdateFilterButtons()
+    RefreshCards()
 end
 
 local function TrySetModel(card, mount)
@@ -547,9 +660,47 @@ local function EnsureFrame()
     content:SetPoint("TOPRIGHT", scroll, "TOPLEFT", -SCROLLBAR_OFFSET, 0)
     content:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMLEFT", -SCROLLBAR_OFFSET, 0)
 
+    local filterBar = CreateFrame("Frame", nil, content)
+    filterBar:SetPoint("TOPLEFT", 0, 0)
+    filterBar:SetPoint("TOPRIGHT", 0, 0)
+    filterBar:SetHeight(FILTER_BAR_HEIGHT)
+
+    local buttonWidth = 102
+    local buttonGap = 8
+    local previousButton
+    for _, filterDef in ipairs(FILTER_DEFINITIONS) do
+        local button = CreateFrame("Button", nil, filterBar, "BackdropTemplate")
+        button:SetSize(buttonWidth, FILTER_BAR_HEIGHT)
+        button:SetBackdrop({
+            bgFile = "Interface/Buttons/WHITE8X8",
+            edgeFile = "Interface/Buttons/WHITE8X8",
+            edgeSize = 1,
+        })
+
+        if previousButton then
+            button:SetPoint("LEFT", previousButton, "RIGHT", buttonGap, 0)
+        else
+            button:SetPoint("LEFT", 0, 0)
+        end
+
+        local text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        text:SetPoint("CENTER")
+        text:SetText(filterDef.label)
+
+        button.text = text
+        button.filterKey = filterDef.key
+        button:SetScript("OnClick", function(self)
+            SetActiveFilter(self.filterKey)
+        end)
+
+        HorseAlbum.filterButtons[#HorseAlbum.filterButtons + 1] = button
+        previousButton = button
+    end
+
     frame.title = title
     frame.content = content
     frame.scroll = scroll
+    frame.filterBar = filterBar
     frame.detailsPanel = detailsPanel
     frame.infoPanel = infoPanel
 
@@ -564,6 +715,7 @@ local function EnsureFrame()
     table.insert(UISpecialFrames, "HorseAlbumFrame")
 
     HorseAlbum.frame = frame
+    UpdateFilterButtons()
 end
 
 local function GetColumns(frame)
@@ -573,7 +725,8 @@ local function GetColumns(frame)
 end
 
 local function GetVisibleRows(frame)
-    local height = frame.content:GetHeight()
+    local reservedHeight = FILTER_BAR_HEIGHT + FILTER_BAR_GAP
+    local height = math.max(CARD_HEIGHT, frame.content:GetHeight() - reservedHeight)
     local rows = math.max(1, math.floor(((height + CARD_SPACING) / (CARD_HEIGHT + CARD_SPACING)) + 0.5))
     return rows
 end
@@ -634,7 +787,8 @@ RefreshCards = function()
         local mount = mounts[dataIndex]
 
         card:ClearAllPoints()
-        card:SetPoint("TOPLEFT", col * (CARD_WIDTH + CARD_SPACING), -row * (CARD_HEIGHT + CARD_SPACING))
+        card:SetPoint("TOPLEFT", col * (CARD_WIDTH + CARD_SPACING),
+            -(FILTER_BAR_HEIGHT + FILTER_BAR_GAP) - (row * (CARD_HEIGHT + CARD_SPACING)))
 
         if mount then
             card.mountID = mount.mountID
@@ -667,11 +821,11 @@ RefreshCards = function()
 end
 
 local function RefreshData()
-    HorseAlbum.mounts = GetCollectedMounts()
+    HorseAlbum.allMounts = GetCollectedMounts()
 
     if HorseAlbum.selectedMountID then
         local selectedMount
-        for _, mount in ipairs(HorseAlbum.mounts) do
+        for _, mount in ipairs(HorseAlbum.allMounts) do
             if mount.mountID == HorseAlbum.selectedMountID then
                 selectedMount = mount
                 break
@@ -683,10 +837,12 @@ local function RefreshData()
         end
     end
 
+    ApplyMountFilter(false)
+
     UpdateDetailsPanel()
     RefreshCards()
 
-    if HorseAlbum.frame and HorseAlbum.frame:IsShown() and #HorseAlbum.mounts == 0 then
+    if HorseAlbum.frame and HorseAlbum.frame:IsShown() and #HorseAlbum.allMounts == 0 then
         Print("No collected mounts found.")
     end
 end
