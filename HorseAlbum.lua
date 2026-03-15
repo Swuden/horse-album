@@ -154,6 +154,27 @@ local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cff89dcebHorseAlbum|r: " .. msg)
 end
 
+local function PickupMountSpell(mountID, spellID)
+    local legacyPickupSpell = _G and rawget(_G, "PickupSpell")
+
+    if C_Spell and C_Spell.PickupSpell and spellID then
+        C_Spell.PickupSpell(spellID)
+        return true
+    end
+
+    if legacyPickupSpell and spellID then
+        legacyPickupSpell(spellID)
+        return true
+    end
+
+    if C_MountJournal and C_MountJournal.Pickup and mountID then
+        C_MountJournal.Pickup(mountID)
+        return true
+    end
+
+    return false
+end
+
 local function CreateCard(parent, index)
     local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
     button:SetSize(CARD_WIDTH, CARD_HEIGHT)
@@ -176,6 +197,7 @@ local function CreateCard(parent, index)
     model:SetPoint("TOPRIGHT", -8, -8)
     model:SetHeight(185)
     model:SetKeepModelOnHide(true)
+    model:EnableMouse(false)
 
     local fallback = button:CreateTexture(nil, "ARTWORK")
     fallback:SetPoint("TOPLEFT", model, "TOPLEFT")
@@ -212,7 +234,7 @@ local function CreateCard(parent, index)
             return
         end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetMountBySpellID(self.spellID)
+        GameTooltip:SetSpellByID(self.spellID)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: Select mount", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Use Summon button in right panel", 0.8, 0.8, 0.8)
@@ -239,7 +261,9 @@ local function CreateCard(parent, index)
             Print("Cannot drag mount spells while in combat.")
             return
         end
-        PickupSpell(self.spellID)
+        if not PickupMountSpell(self.mountID, self.spellID) then
+            Print("Unable to place this mount on your action bar on this client build.")
+        end
     end)
 
     button:SetScript("OnMouseWheel", function(_, delta)
@@ -259,7 +283,7 @@ local function GetCollectedMounts()
 
         if isCollected then
             local displayID, description, sourceText, isSelfMount, mountTypeID = C_MountJournal.GetMountInfoExtraByID(
-            mountID)
+                mountID)
             mounts[#mounts + 1] = {
                 mountID = mountID,
                 name = name,
