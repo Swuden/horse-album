@@ -296,12 +296,14 @@ UpdateDetailsPanel = function()
         panel.modelFallback:Hide()
         panel.nameText:SetText("Select a mount")
         panel.sourceText:SetText("Click any card to preview it here.")
+        panel.descriptionText:SetText("")
         panel.summonButton:Disable()
         return
     end
 
     panel.nameText:SetText(mount.name or "Unknown Mount")
     panel.sourceText:SetText(mount.sourceText or "")
+    panel.descriptionText:SetText(mount.description or "")
     panel.summonButton:Enable()
     TrySetPanelModel(panel, mount)
 end
@@ -469,15 +471,6 @@ local function EnsureFrame()
     detailsName:SetJustifyH("CENTER")
     detailsName:SetText("Select a mount")
 
-    local detailsSource = detailsPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    detailsSource:SetPoint("TOPLEFT", detailsName, "BOTTOMLEFT", 0, -8)
-    detailsSource:SetPoint("TOPRIGHT", detailsName, "BOTTOMRIGHT", 0, -8)
-    detailsSource:SetPoint("BOTTOMLEFT", 14, 54)
-    detailsSource:SetPoint("BOTTOMRIGHT", -14, 54)
-    detailsSource:SetJustifyH("CENTER")
-    detailsSource:SetJustifyV("TOP")
-    detailsSource:SetText("Click any card to preview it here.")
-
     local summonButton = CreateFrame("Button", nil, detailsPanel, "UIPanelButtonTemplate")
     summonButton:SetSize(160, 28)
     summonButton:SetPoint("BOTTOM", 0, 16)
@@ -494,6 +487,25 @@ local function EnsureFrame()
         end
         C_MountJournal.SummonByID(mount.mountID)
     end)
+
+    local detailsSource = detailsPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    detailsSource:SetPoint("TOPLEFT", detailsName, "BOTTOMLEFT", 0, -8)
+    detailsSource:SetPoint("TOPRIGHT", detailsName, "BOTTOMRIGHT", 0, -8)
+    detailsSource:SetPoint("LEFT", 14, 0)
+    detailsSource:SetPoint("RIGHT", -14, 0)
+    detailsSource:SetJustifyH("CENTER")
+    detailsSource:SetJustifyV("TOP")
+    detailsSource:SetMaxLines(2)
+    detailsSource:SetText("Click any card to preview it here.")
+
+    local detailsDescription = detailsPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    detailsDescription:SetPoint("TOPLEFT", detailsSource, "BOTTOMLEFT", 0, -8)
+    detailsDescription:SetPoint("TOPRIGHT", detailsSource, "BOTTOMRIGHT", 0, -8)
+    detailsDescription:SetPoint("BOTTOMLEFT", 14, 52)
+    detailsDescription:SetPoint("BOTTOMRIGHT", -14, 52)
+    detailsDescription:SetJustifyH("CENTER")
+    detailsDescription:SetJustifyV("TOP")
+    detailsDescription:SetText("")
 
     local infoPanel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     infoPanel:SetPoint("TOPLEFT", detailsPanel, "BOTTOMLEFT", 0, -CARD_SPACING)
@@ -546,6 +558,7 @@ local function EnsureFrame()
     detailsPanel.modelFallback = detailsFallback
     detailsPanel.nameText = detailsName
     detailsPanel.sourceText = detailsSource
+    detailsPanel.descriptionText = detailsDescription
     detailsPanel.summonButton = summonButton
 
     table.insert(UISpecialFrames, "HorseAlbumFrame")
