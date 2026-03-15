@@ -1,8 +1,10 @@
-## Interface: 120001, 120000
+## Interface: 120000
 ## Title: HorseAlbum
 ## Notes: Full-screen mount album with 3D preview cards
 ## Author: Veinlash and GPT 5.3 Codex
 ## Version: 1.0.0
+## IconTexture: Interface\Icons\Mount_Horse_01
 ## SavedVariables: HorseAlbumDB
+## X-Curse-Project-ID: [Add your ID here after creating the project]
 
 HorseAlbum.lua
