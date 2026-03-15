@@ -22,6 +22,7 @@
     "FauxScrollFrame_GetOffset",
     "UIParent",
     "GameTooltip",
-    "FauxScrollFrame_OnVerticalScroll"
+    "FauxScrollFrame_OnVerticalScroll",
+    "FauxScrollFrame_SetOffset"
   ]
 }

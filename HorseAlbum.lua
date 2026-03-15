@@ -19,6 +19,7 @@ local SCROLLBAR_TO_PANEL_GAP = 12
 local RefreshCards
 local UpdateDetailsPanel
 local SetSelectedMount
+local ScrollListByWheel
 
 local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cff89dcebHorseAlbum|r: " .. msg)
@@ -29,6 +30,7 @@ local function CreateCard(parent, index)
     button:SetSize(CARD_WIDTH, CARD_HEIGHT)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button:RegisterForDrag("LeftButton")
+    button:EnableMouseWheel(true)
 
     button:SetBackdrop({
         bgFile = "Interface/Buttons/WHITE8X8",
@@ -109,6 +111,10 @@ local function CreateCard(parent, index)
             return
         end
         PickupSpell(self.spellID)
+    end)
+
+    button:SetScript("OnMouseWheel", function(_, delta)
+        ScrollListByWheel(delta)
     end)
 
     return button
@@ -374,11 +380,20 @@ local function EnsureFrame()
     local content = CreateFrame("Frame", nil, frame)
     content:SetPoint("TOPLEFT", EDGE_PADDING, -HEADER_HEIGHT - EDGE_PADDING)
     content:SetPoint("BOTTOMLEFT", EDGE_PADDING, EDGE_PADDING + FOOTER_HEIGHT)
+    content:EnableMouse(true)
+    content:EnableMouseWheel(true)
+    content:SetScript("OnMouseWheel", function(_, delta)
+        ScrollListByWheel(delta)
+    end)
 
     local scroll = CreateFrame("ScrollFrame", "HorseAlbumScrollFrame", frame, "FauxScrollFrameTemplate")
     scroll:SetPoint("TOPRIGHT", detailsPanel, "TOPLEFT", -SCROLLBAR_TO_PANEL_GAP, 0)
     scroll:SetPoint("BOTTOMRIGHT", detailsPanel, "BOTTOMLEFT", -SCROLLBAR_TO_PANEL_GAP, 0)
     scroll:SetWidth(SCROLLBAR_WIDTH)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(_, delta)
+        ScrollListByWheel(delta)
+    end)
 
     content:SetPoint("TOPRIGHT", scroll, "TOPLEFT", -SCROLLBAR_OFFSET, 0)
     content:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMLEFT", -SCROLLBAR_OFFSET, 0)
@@ -420,6 +435,27 @@ local function AcquireCard(index)
     card = CreateCard(HorseAlbum.frame.content, index)
     HorseAlbum.cards[index] = card
     return card
+end
+
+ScrollListByWheel = function(delta)
+    local frame = HorseAlbum.frame
+    if not frame or not frame:IsShown() then
+        return
+    end
+
+    local columns = GetColumns(frame)
+    local visibleRows = GetVisibleRows(frame)
+    local totalRows = math.ceil(#HorseAlbum.mounts / columns)
+    local maxOffset = math.max(0, totalRows - visibleRows)
+    local currentOffset = FauxScrollFrame_GetOffset(frame.scroll)
+    local newOffset = math.max(0, math.min(maxOffset, currentOffset - delta))
+
+    if newOffset == currentOffset then
+        return
+    end
+
+    local step = CARD_HEIGHT + CARD_SPACING
+    FauxScrollFrame_OnVerticalScroll(frame.scroll, newOffset * step, step, RefreshCards)
 end
 
 RefreshCards = function()
