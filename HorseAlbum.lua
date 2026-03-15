@@ -184,8 +184,40 @@ local function EnsureFrame()
     end
 
     local frame = CreateFrame("Frame", "HorseAlbumFrame", UIParent, "BackdropTemplate")
-    frame:SetFrameStrata("FULLSCREEN_DIALOG")
-    frame:SetAllPoints(UIParent)
+    frame:SetFrameStrata("DIALOG")
+    frame:SetClampedToScreen(true)
+
+    local function ApplyWindowSize()
+        local parentWidth = UIParent:GetWidth() or 0
+        local parentHeight = UIParent:GetHeight() or 0
+        local desiredWidth = math.max(900, math.floor(parentWidth * 0.8))
+        local desiredHeight = math.max(600, math.floor(parentHeight * 0.8))
+
+        local horizontalChrome = (EDGE_PADDING * 2) + 26
+        local colStride = CARD_WIDTH + CARD_SPACING
+        local desiredContentWidth = math.max(CARD_WIDTH, desiredWidth - horizontalChrome)
+
+        -- Snap width to an integer number of columns to avoid large empty space on the right.
+        local columns = math.max(1, math.floor(((desiredContentWidth + CARD_SPACING) / colStride) + 0.5))
+        local snappedContentWidth = (columns * colStride) - CARD_SPACING
+        local width = snappedContentWidth + horizontalChrome
+
+        local verticalChrome = HEADER_HEIGHT + (EDGE_PADDING * 2) + FOOTER_HEIGHT
+        local rowStride = CARD_HEIGHT + CARD_SPACING
+        local desiredContentHeight = math.max(CARD_HEIGHT, desiredHeight - verticalChrome)
+
+        -- Snap height to an integer number of rows to avoid large empty space at the bottom.
+        local rows = math.max(1, math.floor(((desiredContentHeight + CARD_SPACING) / rowStride) + 0.5))
+        local snappedContentHeight = (rows * rowStride) - CARD_SPACING
+        local height = snappedContentHeight + verticalChrome
+
+        frame:SetSize(width, height)
+        frame:ClearAllPoints()
+        frame:SetPoint("CENTER")
+    end
+
+    ApplyWindowSize()
+    frame:SetScript("OnShow", ApplyWindowSize)
     frame:Hide()
 
     frame:SetBackdrop({
