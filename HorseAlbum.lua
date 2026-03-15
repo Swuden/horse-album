@@ -505,7 +505,7 @@ local function EnsureFrame()
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     title:SetPoint("TOP", 0, -18)
-    title:SetText("Horse Album")
+    title:SetText("HorseAlbum")
 
     local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     subtitle:SetPoint("TOP", title, "BOTTOM", 0, -4)
@@ -672,7 +672,7 @@ local function EnsureFrame()
     infoBody:SetJustifyV("TOP")
     infoBody:SetTextColor(1, 1, 1)
     infoBody:SetText(
-    "by Veinlash of Karazhan-EU\n\nFeatures\n- Browse all collected mounts with 3D cards\n- Filter by All, Flying, Ground, and Aquatic\n- View detailed mount source and description\n- Summon directly from the right panel\n- Drag mounts to your action bars\n- Rotate and zoom mount models\n\nHow to use\n1. Open HorseAlbum and click any card to select a mount.\n2. Use filter buttons at the top to narrow your list.\n3. Rotate with mouse drag and zoom with mouse wheel.\n4. Click Summon in the details panel to call the mount.\n5. Drag a mount card to an action bar for quick access.")
+        "by Veinlash of Karazhan-EU\n\nFeatures\n- Browse all collected mounts with 3D cards\n- Filter by All, Flying, Ground, and Aquatic\n- View detailed mount source and description\n- Summon directly from the right panel\n- Drag mounts to your action bars\n- Rotate and zoom mount models\n\nHow to use\n1. Open HorseAlbum and click any card to select a mount.\n2. Use filter buttons at the top to narrow your list.\n3. Rotate with mouse drag and zoom with mouse wheel.\n4. Click Summon in the details panel to call the mount.\n5. Drag a mount card to an action bar for quick access.")
 
     local content = CreateFrame("Frame", nil, frame)
     content:SetPoint("TOPLEFT", EDGE_PADDING, -HEADER_HEIGHT - EDGE_PADDING)
