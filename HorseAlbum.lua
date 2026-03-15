@@ -17,6 +17,10 @@ local SCROLLBAR_OFFSET = 6
 local SCROLLBAR_TO_PANEL_GAP = 12
 local MODEL_DEFAULT_FACING = 0.45
 local MODEL_ROTATE_SENSITIVITY = 0.02
+local MODEL_DEFAULT_ZOOM = 1.0
+local MODEL_ZOOM_STEP = 0.08
+local MODEL_MIN_ZOOM = 0.55
+local MODEL_MAX_ZOOM = 2.2
 
 local RefreshCards
 local UpdateDetailsPanel
@@ -24,6 +28,19 @@ local SetSelectedMount
 local ScrollListByWheel
 
 HorseAlbum.modelFacing = MODEL_DEFAULT_FACING
+HorseAlbum.modelZoom = MODEL_DEFAULT_ZOOM
+
+local function ClampZoom(zoom)
+    return math.max(MODEL_MIN_ZOOM, math.min(MODEL_MAX_ZOOM, zoom))
+end
+
+local function GetPanelCamDistanceScale()
+    return ClampZoom(HorseAlbum.modelZoom or MODEL_DEFAULT_ZOOM)
+end
+
+local function GetCardCamDistanceScale()
+    return 1.3 * ClampZoom(HorseAlbum.modelZoom or MODEL_DEFAULT_ZOOM)
+end
 
 local function ApplyModelFacing(facing)
     HorseAlbum.modelFacing = facing
@@ -40,6 +57,25 @@ local function ApplyModelFacing(facing)
     for _, card in ipairs(HorseAlbum.cards) do
         if card and card:IsShown() and card.model and card.model:IsShown() then
             card.model:SetFacing(facing)
+        end
+    end
+end
+
+local function ApplyModelZoom(zoom)
+    HorseAlbum.modelZoom = ClampZoom(zoom)
+
+    local frame = HorseAlbum.frame
+    if not frame then
+        return
+    end
+
+    if frame.detailsPanel and frame.detailsPanel.model and frame.detailsPanel.model:IsShown() then
+        frame.detailsPanel.model:SetCamDistanceScale(GetPanelCamDistanceScale())
+    end
+
+    for _, card in ipairs(HorseAlbum.cards) do
+        if card and card:IsShown() and card.model and card.model:IsShown() then
+            card.model:SetCamDistanceScale(GetCardCamDistanceScale())
         end
     end
 end
@@ -188,7 +224,7 @@ local function TrySetModel(card, mount)
     card.model:Show()
 
     card.model:ClearModel()
-    card.model:SetCamDistanceScale(1.3)
+    card.model:SetCamDistanceScale(GetCardCamDistanceScale())
     card.model:SetPortraitZoom(0)
     card.model:SetPosition(0, 0, 0)
     card.model:SetFacing(HorseAlbum.modelFacing or MODEL_DEFAULT_FACING)
@@ -219,7 +255,7 @@ local function TrySetPanelModel(panel, mount)
     panel.model:Show()
 
     panel.model:ClearModel()
-    panel.model:SetCamDistanceScale(1.0)
+    panel.model:SetCamDistanceScale(GetPanelCamDistanceScale())
     panel.model:SetPortraitZoom(0)
     panel.model:SetPosition(0, 0, 0)
     panel.model:SetFacing(HorseAlbum.modelFacing or MODEL_DEFAULT_FACING)
@@ -366,6 +402,7 @@ local function EnsureFrame()
     rotateOverlay:SetPoint("TOPLEFT", detailsModel, "TOPLEFT")
     rotateOverlay:SetPoint("BOTTOMRIGHT", detailsModel, "BOTTOMRIGHT")
     rotateOverlay:EnableMouse(true)
+    rotateOverlay:EnableMouseWheel(true)
 
     rotateOverlay:SetScript("OnMouseDown", function(_, button)
         if button ~= "LeftButton" then
@@ -408,6 +445,15 @@ local function EnsureFrame()
             local facing = (HorseAlbum.modelFacing or MODEL_DEFAULT_FACING) + (deltaX * MODEL_ROTATE_SENSITIVITY)
             ApplyModelFacing(facing)
         end
+    end)
+
+    rotateOverlay:SetScript("OnMouseWheel", function(_, delta)
+        if delta == 0 then
+            return
+        end
+
+        local zoom = (HorseAlbum.modelZoom or MODEL_DEFAULT_ZOOM) - (delta * MODEL_ZOOM_STEP)
+        ApplyModelZoom(zoom)
     end)
 
     local detailsFallback = detailsPanel:CreateTexture(nil, "ARTWORK")
