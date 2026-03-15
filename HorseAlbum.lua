@@ -15,11 +15,34 @@ local DETAIL_PANEL_WIDTH = 440
 local SCROLLBAR_WIDTH = 20
 local SCROLLBAR_OFFSET = 6
 local SCROLLBAR_TO_PANEL_GAP = 12
+local MODEL_DEFAULT_FACING = 0.45
+local MODEL_ROTATE_SENSITIVITY = 0.02
 
 local RefreshCards
 local UpdateDetailsPanel
 local SetSelectedMount
 local ScrollListByWheel
+
+HorseAlbum.modelFacing = MODEL_DEFAULT_FACING
+
+local function ApplyModelFacing(facing)
+    HorseAlbum.modelFacing = facing
+
+    local frame = HorseAlbum.frame
+    if not frame then
+        return
+    end
+
+    if frame.detailsPanel and frame.detailsPanel.model and frame.detailsPanel.model:IsShown() then
+        frame.detailsPanel.model:SetFacing(facing)
+    end
+
+    for _, card in ipairs(HorseAlbum.cards) do
+        if card and card:IsShown() and card.model and card.model:IsShown() then
+            card.model:SetFacing(facing)
+        end
+    end
+end
 
 local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cff89dcebHorseAlbum|r: " .. msg)
@@ -168,7 +191,7 @@ local function TrySetModel(card, mount)
     card.model:SetCamDistanceScale(1.3)
     card.model:SetPortraitZoom(0)
     card.model:SetPosition(0, 0, 0)
-    card.model:SetFacing(0.5)
+    card.model:SetFacing(HorseAlbum.modelFacing or MODEL_DEFAULT_FACING)
 
     if not mount.displayID or mount.displayID <= 0 then
         card.model:Hide()
@@ -199,7 +222,7 @@ local function TrySetPanelModel(panel, mount)
     panel.model:SetCamDistanceScale(1.0)
     panel.model:SetPortraitZoom(0)
     panel.model:SetPosition(0, 0, 0)
-    panel.model:SetFacing(0.45)
+    panel.model:SetFacing(HorseAlbum.modelFacing or MODEL_DEFAULT_FACING)
 
     if not mount.displayID or mount.displayID <= 0 then
         panel.model:Hide()
@@ -339,6 +362,54 @@ local function EnsureFrame()
     detailsModel:SetHeight(320)
     detailsModel:SetKeepModelOnHide(true)
 
+    local rotateOverlay = CreateFrame("Frame", nil, detailsPanel)
+    rotateOverlay:SetPoint("TOPLEFT", detailsModel, "TOPLEFT")
+    rotateOverlay:SetPoint("BOTTOMRIGHT", detailsModel, "BOTTOMRIGHT")
+    rotateOverlay:EnableMouse(true)
+
+    rotateOverlay:SetScript("OnMouseDown", function(_, button)
+        if button ~= "LeftButton" then
+            return
+        end
+
+        local x = GetCursorPosition()
+        local scale = UIParent:GetEffectiveScale() or 1
+        HorseAlbum.isModelRotating = true
+        HorseAlbum.lastRotateCursorX = x / scale
+    end)
+
+    rotateOverlay:SetScript("OnMouseUp", function(_, button)
+        if button == "LeftButton" then
+            HorseAlbum.isModelRotating = false
+        end
+    end)
+
+    rotateOverlay:SetScript("OnHide", function()
+        HorseAlbum.isModelRotating = false
+    end)
+
+    rotateOverlay:SetScript("OnUpdate", function()
+        if not HorseAlbum.isModelRotating then
+            return
+        end
+
+        if not IsMouseButtonDown("LeftButton") then
+            HorseAlbum.isModelRotating = false
+            return
+        end
+
+        local x = GetCursorPosition()
+        local scale = UIParent:GetEffectiveScale() or 1
+        local cursorX = x / scale
+        local deltaX = cursorX - (HorseAlbum.lastRotateCursorX or cursorX)
+        HorseAlbum.lastRotateCursorX = cursorX
+
+        if deltaX ~= 0 then
+            local facing = (HorseAlbum.modelFacing or MODEL_DEFAULT_FACING) + (deltaX * MODEL_ROTATE_SENSITIVITY)
+            ApplyModelFacing(facing)
+        end
+    end)
+
     local detailsFallback = detailsPanel:CreateTexture(nil, "ARTWORK")
     detailsFallback:SetPoint("TOPLEFT", detailsModel, "TOPLEFT")
     detailsFallback:SetPoint("BOTTOMRIGHT", detailsModel, "BOTTOMRIGHT")
@@ -404,6 +475,7 @@ local function EnsureFrame()
     frame.detailsPanel = detailsPanel
 
     detailsPanel.model = detailsModel
+    detailsPanel.rotateOverlay = rotateOverlay
     detailsPanel.modelFallback = detailsFallback
     detailsPanel.nameText = detailsName
     detailsPanel.sourceText = detailsSource
